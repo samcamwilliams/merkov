@@ -1,8 +1,8 @@
 -module(endowment).
 -export([sim/0, sim/2, sim_many/3]).
--export([test_pessimism/0, test_volatility/0, csv/1]).
+-export([test_pessimism/0, test_volatility/0, pessimism_volatility_matrix/2, csv/1]).
 
--define(TEST_RUNS, 100).
+-define(TEST_RUNS, 20).
 
 %% Model the outcomes for the network if the future is only X% as effective at reducing storage costs as
 %% the past. This test outputs the percentage of runs that survive 10,000 years 
@@ -10,9 +10,15 @@ test_pessimism() ->
 	csv(
 		lists:map(
 			fun(Pessimism) ->
-				{Pessimism, sim_many(Pessimism, 0, ?TEST_RUNS)}
+				Results = sim_many(Pessimism, 0, ?TEST_RUNS),
+				[
+					Pessimism,
+					collate(Results, survival_rate),
+					collate(Results, avg_years),
+					collate(Results, avg_burn)
+				]
 			end,
-			[ (X / 1000) || X <- lists:seq(1, 1000) ]
+			[ (X / 100) || X <- lists:seq(1, 100) ]
 		)
 	).
 
@@ -23,19 +29,47 @@ test_volatility() ->
 	csv(
 		lists:map(
 			fun(Volatility) ->
-				{Volatility, sim_many(1, Volatility, ?TEST_RUNS)}
+				Results = sim_many(1, Volatility, ?TEST_RUNS),
+				[
+					Volatility,
+					collate(Results, survival_rate),
+					collate(Results, avg_years),
+					collate(Results, avg_burn)
+				]
 			end,
-			[ (X / 1000) || X <- lists:seq(1, 1000) ]
+			[ (X / 100) || X <- lists:seq(1, 100) ]
 		)
+	).
+
+%% Generate a matrix of values that relate the outcomes on a given metric to changes in volatility and pessimism.
+pessimism_volatility_matrix(Metric, SubDivs) ->
+	csv(
+		[
+			[
+				collate(sim_many(X / SubDivs, Y / SubDivs, ?TEST_RUNS), Metric)
+			||
+				Y <- lists:seq(0, SubDivs)
+			]
+		||
+			X <- lists:seq(0, SubDivs)
+		]
 	).
 
 csv([]) -> ok;
 csv([Fields|Rest]) ->
-	io:format(lists:flatten([ "~p," || _ <- Fields ]) ++ "~n", Fields),
+	io:format(lists:flatten([ "~w," || _ <- Fields ]) ++ "~n", Fields),
 	csv(Rest).
 
+%% Extract a 'success' metric from a series of runs of the simulation.
+collate(Results, survival_rate) ->
+	length([ survived || {survived, _} <- Results ]) / length(Results);
+collate(Results, avg_years) ->
+	avg([ TerminalYrs || {_, {TerminalYrs, _, _}} <- Results ]);
+collate(Results, avg_burn) ->
+	avg([ (Endowment / 200) || {_, {_, Endowment, _}} <- Results ]).
+
 sim_many(Pessimism, Volatility, TestRuns) ->
-	length([ survived || {survived, _} <- [ sim(Pessimism, Volatility) || _ <- lists:seq(1, ?TEST_RUNS) ] ]) / TestRuns.
+	[ sim(Pessimism, Volatility) || _ <- lists:seq(1, TestRuns) ].
 
 sim() -> sim(0, 0).
 sim(Pessimism, Volatility) ->
@@ -43,6 +77,9 @@ sim(Pessimism, Volatility) ->
 	Prices = apply_pessimism(Pessimism, real_yearly_storage_prices()),
 	lists:last(markov:run(
 		step,
+		% In this model starting yearly storage prices are normalized to 1. We take 200 years worth 
+		% from the user at the start to seed the endowment. Replicas, electricity, and operational
+		% costs are also expressed in the single 'all in' storage price in this model.
 		{0, 200, 1},
 		[ {step, 1, generate_adjustment(YearlyAdjustment)} || YearlyAdjustment <- Prices ] ++
 		[ {apply_volatility, 1,
