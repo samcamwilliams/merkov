@@ -111,9 +111,9 @@ calculate_price_changes([_]) -> [].
 %% better drives in the future than we were in the past?
 apply_pessimism(_, []) -> [];
 apply_pessimism(Pessimism, [ PriceChange | Rest ]) when PriceChange >= 1 ->
-	[ PriceChange | apply_pessimism(Pessimism, Rest) ];
+	[ 1 + ((1 - PriceChange) * Pessimism) | apply_pessimism(Pessimism, Rest) ];
 apply_pessimism(Pessimism, [ PriceChange | Rest ]) ->
-	[ 1- ((1 - PriceChange) * Pessimism) | apply_pessimism(Pessimism, Rest) ].
+	[ 1 - ((1 - PriceChange) * Pessimism) | apply_pessimism(Pessimism, Rest) ].
 
 real_yearly_storage_prices() ->
 	Prices = hdd_prices(),
