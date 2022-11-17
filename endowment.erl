@@ -87,7 +87,7 @@ sim(Pessimism, Volatility) ->
 				{step,
 					{Yrs,
 					(Endowment - (Endowment * Volatility)) +
-						(rand:uniform_real() * 2 * (Endowment * Volatility)),
+						(rand:uniform_real() * mult:getCorrespondingMultiplier(Volatility) * (Endowment * Volatility)),
 					Price}
 				}
 			end}
