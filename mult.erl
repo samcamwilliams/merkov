@@ -47,7 +47,12 @@ mean(Bound, RVCount) ->
     avg(Distribution).
 
 calcmean(B, V) ->
-    B*math:log(B)-B-V*math:log(V)+V.
+    if
+        (V == 0) -> 
+            B*math:log(B)-B;
+        true ->
+            B*math:log(B)-B-V*math:log(V)+V
+    end.
 
 findB(Up, Down, V, 0) ->
     Mid = (Up + Down)/2,
