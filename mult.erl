@@ -51,7 +51,6 @@ calcmean(B, V) ->
 
 findB(Up, Down, V, 0) ->
     Mid = (Up + Down)/2,
-    io:fwrite("Out of tries. Outputting latest Mid at mean value ~w.~n", [calcmean(Mid, V)]),
     Mid; 
 findB(Up, Down, V, N) ->
     Mid = (Up + Down)/2,
