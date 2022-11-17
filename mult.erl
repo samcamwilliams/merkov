@@ -1,5 +1,5 @@
 -module(mult).
--export([findB/4, getCorrespondingMultiplier/1]).
+-export([findB/4, getCorrespondingMultiplier/1, simEndowment/3]).
 
 start() -> 
     B = 3-math:sqrt(5/63), 
@@ -68,4 +68,11 @@ findB(Up, Down, V, N) ->
 getCorrespondingMultiplier(Volatility) ->
     Upper = findB(4,0,(1-Volatility),100),
     Multiplier = (Upper-(1-Volatility))/Volatility,
-    Multiplier.    
+    Multiplier. 
+
+simEndowment(_Volatility, Value, 0) ->
+    Value;
+simEndowment(Volatility, Value, Years) ->
+    Multiplier = getCorrespondingMultiplier(Volatility),  
+    NewValue = Value - (Value * Volatility) + rand:uniform_real()*Multiplier*(Value*Volatility),
+    simEndowment(Volatility, NewValue, Years-1). 
